@@ -49,6 +49,11 @@ TS_DISCO_F429ZI ts; // Initialize the built-in touch screen
 #define BUTTON2_Y_START 225
 #define BUTTON2_Y_END   275
 
+
+// variables for Gaussian filter
+#define sigma 1.0
+#define K  1
+
 // define the state of the button pressed
 bool button1_pressed = false;
 bool button2_pressed = false;
@@ -173,6 +178,7 @@ void read_gryscope(){
 
 // record the sequence of the gyroscope data x,y and z
 void record_sequence(){
+  DigitalOut led1(LED1);
   for(int i=0;i<MAX_SEQUENCE;i++){
     printf("Recording sequence %d\n",i);
     read_gryscope();
@@ -182,8 +188,13 @@ void record_sequence(){
     recorded_sequence_raw[i][0] = raw_gx;
     recorded_sequence_raw[i][1] = raw_gy;
     recorded_sequence_raw[i][2] = raw_gz;
+    led1 =1;
     // printf("Recorded|\tgx: %4.5f \t gy: %4.5f \t gz: %4.5f\n",recorded_sequence[i][0],recorded_sequence[i][1],recorded_sequence[i][2]);
     ThisThread::sleep_for(100ms);
+    //led1 =1;
+    // thread_sleep_for(500);
+    led1= 0;
+    // thread_sleep_for(500);
     recorded_sequences.push_back({recorded_sequence[i][0],recorded_sequence[i][1],recorded_sequence[i][2]});
   }
   // store the recorded sequence into the vector
@@ -194,6 +205,7 @@ void record_sequence(){
 }
 // attempt the sequence of the gyroscope data x,y and z
 void attempt_sequence(){
+  DigitalOut led1(LED1);
   for(int i=0;i<MAX_SEQUENCE;i++){
     printf("Attempting sequence %d\n",i);
     read_gryscope();
@@ -203,8 +215,10 @@ void attempt_sequence(){
     attempted_sequence_raw[i][0] = raw_gx;
     attempted_sequence_raw[i][1] = raw_gy;
     attempted_sequence_raw[i][2] = raw_gz;
+    led1 =1;
     // printf("Attempted|\tgx: %4.5f \t gy: %4.5f \t gz: %4.5f\n",attempted_sequence[i][0],attempted_sequence[i][1],attempted_sequence[i][2]);
     ThisThread::sleep_for(100ms);
+    led1 =0;
     attempted_sequences.push_back({attempted_sequence[i][0],attempted_sequence[i][1],attempted_sequence[i][2]});
   }
   // store the attempted sequence into the vector
@@ -293,6 +307,37 @@ void average_filter(std::vector<std::vector<float>> &sequence, int window_size =
 
 }
 
+// try to implement Gaussian Filter here
+
+void gaussian_filter(std::vector<std::vector<float>> &sequence, int window_size = 5){
+  if (sequence.empty() || window_size <= 1) {
+    return;
+  }
+
+  int num_points = sequence.size();
+  int num_dimensions = sequence[0].size();
+
+  std::vector<std::vector<float>> filtered_sequence(num_points, std::vector<float>(num_dimensions, 0.0f));
+  
+  for (int i = 0; i < num_points; ++i) {
+    for (int j = 0; j < num_dimensions; ++j) {
+      int window_start = i - (num_points - 1) / 2.0;
+      int window_end = j - (num_points - 1) / 2.0;
+      sequence[i][j] = K * exp(((pow(window_start, 2) + pow(window_end, 2)) / ((2 * pow(sigma, 2)))) * (-1));
+
+      float sum = 0;
+      for (int k = window_start; k <= window_end; ++k) {
+        sum += sequence[k][j];
+      }
+
+      filtered_sequence[i][j] = sum / (window_end - window_start + 1);
+    }
+  }
+  sequence = filtered_sequence;
+
+}
+
+
 // compare the recorded sequence and attempted sequence using DTW algorithm
 float compare_sequence(std::vector<std::vector<float>> &seq1, std::vector<std::vector<float>> &seq2){
   // use the DTW algorithm to compare the two sequences
@@ -346,7 +391,7 @@ int main() {
   lcd.DisplayStringAt(8, 30, (uint8_t *)"2023 Gesture Unlock", CENTER_MODE);
   lcd.DisplayStringAt(10, 50, (uint8_t *)"RTES Project", CENTER_MODE);
   lcd.DisplayStringAt(10, 70, (uint8_t *)"Team 40", CENTER_MODE);
-  lcd.DisplayStringAt(10, 90, (uint8_t *)"zw3464", CENTER_MODE);
+  lcd.DisplayStringAt(10, 90, (uint8_t *)"zw3464   yl10673", CENTER_MODE);
   // Display the buttons on the screen
   lcd.DisplayStringAt(10, 160, (uint8_t *)"Record Button", CENTER_MODE);
   lcd.DisplayStringAt(10, 240, (uint8_t *)"Attempt Button", CENTER_MODE);
