@@ -37,6 +37,8 @@ Team 40 work presentation is here:
  5) Average Moving filter: windows size 5 (it could work better for our design)
  6) Gaussian filter: Kernel size 5 and sigma 1.0 (it could not detect too sensitive gesture)
     Before the designed filter, we also do the Normalization, Calibration to set the original datapoint(0,0,0) and remove some noise
+ 7 Use DTW(Dynamic Time Warping) Algorithm to measure similarity between two temporal sequences, which may vary in speed. 
+   It is very useful for our gesture unlock design
  
 Above this design, our embedded system could work correctly.
 
